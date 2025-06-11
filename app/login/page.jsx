@@ -8,7 +8,7 @@ import { RiLockPasswordFill } from "react-icons/ri";
 
 export default function LoginPage() {
   const router = useRouter();
-  const [emailAddress, setEmailAddress] = useState("");
+  const [userName, setUserName] = useState("");
   const [password, setPassword] = useState("");
   const [showPassword, setShowPassword] = useState(false);
   const [error, setError] = useState(null);
@@ -20,19 +20,16 @@ export default function LoginPage() {
     const res = await fetch("/api/login", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
-      body: JSON.stringify({
-        email: emailAddress,
-        password,
-      }),
+      credentials: "include",
+      body: JSON.stringify({ userId: userName, password }),
     });
 
     const data = await res.json();
 
     if (res.ok) {
-      localStorage.setItem("token", data.token);
       router.push("/dashboard");
     } else {
-      setError(data.error);
+      setError(data.error || "Giriş başarısız");
     }
   }
 
@@ -45,9 +42,9 @@ export default function LoginPage() {
             <FaUserAlt className="absolute top-2 left-2 pointer-events-none" />
             <input
               type="text"
-              placeholder="Email"
-              value={emailAddress}
-              onChange={(e) => setEmailAddress(e.target.value)}
+              placeholder="Username"
+              value={userName}
+              onChange={(e) => setUserName(e.target.value)}
               className="border-2 rounded-md px-7 py-1 w-full"
             />
           </div>

@@ -28,17 +28,15 @@ export default function RegisterPage() {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        email: emailAddress,
+        userId: userName,
         password,
-        username: userName,
-        phone: phoneNumber,
       }),
     });
 
     const data = await res.json();
 
     if (res.ok) {
-      router.push("/login");
+      router.push("/dashboard");
     } else {
       setError(data.error);
     }

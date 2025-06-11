@@ -1,21 +1,24 @@
 import { NextResponse } from "next/server";
-import { addUser, findUserByEmail } from "../../lib/users";
+import bcrypt from "bcryptjs";
+import jwt from "jsonwebtoken";
 
-export async function POST(req) {
-  const { email, password, username, phone } = await req.json();
+export async function POST(request) {
+  const { userId, password } = await request.json();
 
-  if (!email || !password || !username || !phone) {
-    return NextResponse.json({ error: "Tüm alanlar zorunlu" }, { status: 400 });
-  }
+  const SECRET = process.env.JWT_SECRET;
+  const hashedPassword = await bcrypt.hash(password, 10);
+  const token = jwt.sign({ userId, hashedPassword }, SECRET, {
+    expiresIn: "7d",
+  });
+  const response = NextResponse.json({ success: true });
 
-  if (findUserByEmail(email)) {
-    return NextResponse.json(
-      { error: "Bu email zaten kayıtlı." },
-      { status: 400 }
-    );
-  }
+  response.cookies.set("token", token, {
+    httpOnly: false,
+    path: "/",
+    sameSite: "lax",
+    secure: false,
+    maxAge: 60 * 60 * 24 * 7,
+  });
 
-  addUser({ email, password, username, phone });
-
-  return NextResponse.json({ message: "Kayıt başarılı" });
+  return response;
 }

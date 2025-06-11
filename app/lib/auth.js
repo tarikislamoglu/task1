@@ -1,23 +1,7 @@
 import jwt from "jsonwebtoken";
 
-const SECRET = process.env.JWT_SECRET;
+const SECRET = process.env.JWT_SECRET || "gizliAnahtar";
 
-export function generateToken(user) {
-  if (!SECRET) {
-    throw new Error("JWT_SECRET env değişkeni eksik");
-  }
-
-  return jwt.sign({ email: user.email }, SECRET, { expiresIn: "1h" });
-}
-
-export function verifyToken(token) {
-  if (!SECRET) {
-    throw new Error("JWT_SECRET env değişkeni eksik");
-  }
-
-  try {
-    return jwt.verify(token, SECRET);
-  } catch {
-    return null;
-  }
+export function generateToken(data) {
+  return jwt.sign(data, SECRET, { expiresIn: "7d" });
 }

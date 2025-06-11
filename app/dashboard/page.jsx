@@ -30,6 +30,7 @@ import { IoFilter } from "react-icons/io5";
 import DateRangeBox from "../components/DateRangeBox";
 import SelectAvatar from "../components/SelectAvatar";
 import SelectFlag from "../components/SelectFlag";
+import Cookies from "js-cookie";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -38,7 +39,6 @@ export default function Dashboard() {
   const cart = useSelector((state) => state.cart.cart);
   const activeProject = useSelector(selectActiveProject);
 
-  // Diğer state’ler
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [selectedBoardId, setSelectedBoardId] = useState(null);
   const [userEmail, setUserEmail] = useState(null);
@@ -51,7 +51,9 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-    const token = localStorage.getItem("token");
+    const token = Cookies.get("token");
+    console.log(token); // Token değerini gör
+
     if (!token) return router.push("/login");
     try {
       const payload = JSON.parse(atob(token.split(".")[1]));
@@ -80,6 +82,12 @@ export default function Dashboard() {
       })
     );
   };
+  async function handleLogout() {
+    await fetch("/api/logout", {
+      method: "POST",
+    });
+    router.push("/login");
+  }
 
   const selectedBoard = activeProject?.boards.find(
     (b) => b.id === selectedBoardId
@@ -137,10 +145,7 @@ export default function Dashboard() {
           <div className="md:block hidden">
             <p>{userEmail}</p>
             <button
-              onClick={() => {
-                localStorage.removeItem("token");
-                router.push("/login");
-              }}
+              onClick={handleLogout}
               className="text-red-300 mt-2 underline"
             >
               Çıkış Yap
