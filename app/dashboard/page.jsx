@@ -31,6 +31,7 @@ import DateRangeBox from "../components/DateRangeBox";
 import SelectAvatar from "../components/SelectAvatar";
 import SelectFlag from "../components/SelectFlag";
 import Cookies from "js-cookie";
+import jwt from "jsonwebtoken";
 
 export default function Dashboard() {
   const router = useRouter();
@@ -51,16 +52,24 @@ export default function Dashboard() {
   });
 
   useEffect(() => {
-    const token = Cookies.get("token");
-    console.log(token); // Token değerini gör
+    async function checkAuth() {
+      try {
+        const res = await fetch("/api/auth/check");
+        const data = await res.json();
 
-    if (!token) return router.push("/login");
-    try {
-      const payload = JSON.parse(atob(token.split(".")[1]));
-      setUserEmail(payload.email);
-    } catch {
-      router.push("/login");
+        if (!res.ok) {
+          router.push("/login");
+          return;
+        }
+
+        setUserEmail(data.user.email);
+      } catch (error) {
+        console.error("Auth check error:", error);
+        router.push("/login");
+      }
     }
+
+    checkAuth();
   }, [router]);
 
   const handleCreateProject = () => {

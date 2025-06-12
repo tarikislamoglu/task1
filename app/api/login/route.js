@@ -6,18 +6,23 @@ import { cookies } from "next/headers";
 const SECRET = process.env.JWT_SECRET || "gizliAnahtar";
 
 export async function POST(request) {
-  const { userId, password } = await request.json();
-
-  const cookieStore = cookies();
-  const token = cookieStore.get("token")?.value;
-
-  if (!token) {
-    return NextResponse.json({ error: "Token bulunamadı" }, { status: 401 });
-  }
-
   try {
-    const decoded = jwt.verify(token, SECRET);
+    const { userId, password } = await request.json();
+    const cookieStore = cookies();
 
+    // Kullanıcı bilgilerini cookie'den al
+    const userData = cookieStore.get("userData")?.value;
+    if (!userData) {
+      return NextResponse.json(
+        { error: "Kullanıcı bulunamadı" },
+        { status: 401 }
+      );
+    }
+
+    // Token'ı doğrula ve kullanıcı bilgilerini al
+    const decoded = jwt.verify(userData, SECRET);
+
+    // Kullanıcı adı kontrolü
     if (decoded.userId !== userId) {
       return NextResponse.json(
         { error: "Kullanıcı bulunamadı" },
@@ -25,16 +30,54 @@ export async function POST(request) {
       );
     }
 
-    const isPasswordMatch = await bcrypt.compare(
+    // Şifre kontrolü
+    const isPasswordValid = await bcrypt.compare(
       password,
       decoded.hashedPassword
     );
-    if (!isPasswordMatch) {
-      return NextResponse.json({ error: "Şifre yanlış" }, { status: 401 });
+    if (!isPasswordValid) {
+      return NextResponse.json({ error: "Şifre hatalı" }, { status: 401 });
     }
 
-    return NextResponse.json({ success: true, userId: decoded.userId });
+    // Oturum token'ı oluştur
+    const sessionToken = jwt.sign(
+      {
+        userId: decoded.userId,
+        email: decoded.email,
+      },
+      SECRET,
+      { expiresIn: "7d" }
+    );
+
+    const response = NextResponse.json({
+      success: true,
+      user: {
+        userId: decoded.userId,
+        email: decoded.email,
+      },
+    });
+
+    // Oturum token'ını cookie'ye kaydet
+    response.cookies.set("token", sessionToken, {
+      httpOnly: true,
+      path: "/",
+      sameSite: "lax",
+      secure: process.env.NODE_ENV === "production",
+      maxAge: 60 * 60 * 24 * 7, // 7 gün
+    });
+
+    return response;
   } catch (error) {
-    return NextResponse.json({ error: "Token geçersiz" }, { status: 401 });
+    console.error("LOGIN API ERROR:", error);
+    if (error.name === "JsonWebTokenError") {
+      return NextResponse.json(
+        { error: "Geçersiz oturum, lütfen tekrar giriş yapın" },
+        { status: 401 }
+      );
+    }
+    return NextResponse.json(
+      { error: "Giriş işlemi sırasında bir hata oluştu" },
+      { status: 500 }
+    );
   }
 }

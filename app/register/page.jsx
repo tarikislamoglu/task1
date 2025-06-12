@@ -30,6 +30,8 @@ export default function RegisterPage() {
       body: JSON.stringify({
         userId: userName,
         password,
+        email: emailAddress,
+        phoneNumber,
       }),
     });
 
