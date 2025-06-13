@@ -11,6 +11,7 @@ import {
   selectActiveProject,
 } from "../features/cartSlice";
 
+//icons
 import {
   IoIosArrowUp,
   IoIosArrowDown,
@@ -27,15 +28,16 @@ import { BsThreeDots } from "react-icons/bs";
 import { HiOutlineArrowTopRightOnSquare, HiOutlineStar } from "react-icons/hi2";
 import { IoFilter } from "react-icons/io5";
 
+//components
 import DateRangeBox from "../components/DateRangeBox";
 import SelectAvatar from "../components/SelectAvatar";
 import SelectFlag from "../components/SelectFlag";
-import Cookies from "js-cookie";
-import jwt from "jsonwebtoken";
+import useDragScroll from "../components/useDragScroll";
 
 export default function Dashboard() {
   const router = useRouter();
   const dispatch = useDispatch();
+  const scrollRef = useDragScroll();
 
   const cart = useSelector((state) => state.cart.cart);
   const activeProject = useSelector(selectActiveProject);
@@ -91,6 +93,7 @@ export default function Dashboard() {
       })
     );
   };
+
   async function handleLogout() {
     await fetch("/api/logout", {
       method: "POST",
@@ -171,95 +174,100 @@ export default function Dashboard() {
             <h2 className="text-lg font-semibold mb-2">
               {activeProject.name} - Boards
             </h2>
-            <ul className="flex gap-4 overflow-x-auto p-4 bg-white rounded shadow">
-              {activeProject.boards.map((board) => (
-                <li key={board.id}>
-                  <div className="w-[300px] h-[500px] bg-gray-50 p-4 rounded shadow">
-                    <div className="flex justify-between items-center mb-2">
-                      <h3 className="font-semibold">{board.title}</h3>
-                      <button
-                        onClick={() =>
-                          dispatch(removeBoardFromActiveProject(board.id))
-                        }
-                      >
-                        X
-                      </button>
-                    </div>
+            <div className="relative">
+              <ul
+                ref={scrollRef}
+                className="flex gap-4 p-4 bg-white rounded shadow select-none overflow-x-auto cursor-grab"
+              >
+                {activeProject.boards.map((board) => (
+                  <li key={board.id} className="flex-shrink-0">
+                    <div className="w-[300px] h-[500px] bg-gray-50 p-4 rounded shadow">
+                      <div className="flex justify-between items-center mb-2">
+                        <h3 className="font-semibold">{board.title}</h3>
+                        <button
+                          onClick={() =>
+                            dispatch(removeBoardFromActiveProject(board.id))
+                          }
+                        >
+                          X
+                        </button>
+                      </div>
 
-                    <div className="mt-2 text-sm  max-h-[180px]">
-                      {board.comments.length > 0 ? (
-                        <div className="overflow-y-auto">
-                          {board.comments.map((c, idx) => {
-                            return (
-                              <div
-                                key={idx}
-                                className="p-2 bg-white border rounded mb-1  space-y-2"
-                              >
-                                <div className="flex items-center gap-2 mb-1">
-                                  {c.avatars.map(({ id, src, name }) => (
-                                    <img
-                                      key={id}
-                                      src={src}
-                                      className="w-5 h-5 rounded-full border"
-                                      title={name}
-                                      alt={name}
-                                    />
-                                  ))}
+                      <div className="mt-2 text-sm  max-h-[180px]">
+                        {board.comments.length > 0 ? (
+                          <div className="overflow-y-auto">
+                            {board.comments.map((c, idx) => {
+                              return (
+                                <div
+                                  key={idx}
+                                  className="p-2 bg-white border rounded mb-1  space-y-2"
+                                >
+                                  <div className="flex items-center gap-2 mb-1">
+                                    {c.avatars.map(({ id, src, name }) => (
+                                      <img
+                                        key={id}
+                                        src={src}
+                                        className="w-5 h-5 rounded-full border"
+                                        title={name}
+                                        alt={name}
+                                      />
+                                    ))}
+                                  </div>
+                                  <p>{c.text}</p>
+                                  <p className="text-xs italic text-gray-500">
+                                    {new Date(
+                                      c.dateRange.startDate
+                                    ).toLocaleDateString()}
+                                    -
+                                    {new Date(
+                                      c.dateRange.endDate
+                                    ).toLocaleDateString()}
+                                  </p>
                                 </div>
-                                <p>{c.text}</p>
-                                <p className="text-xs italic text-gray-500">
-                                  {new Date(
-                                    c.dateRange.startDate
-                                  ).toLocaleDateString()}
-                                  -
-                                  {new Date(
-                                    c.dateRange.endDate
-                                  ).toLocaleDateString()}
-                                </p>
-                                <p className="text-xs text-gray-700 flex space-x-3">
-                                  <span> Milestone Name</span>
-                                  <img src={c.flag.src} />
-                                </p>
-                              </div>
-                            );
-                          })}
-                          <button
-                            className="bg-blue-600 text-white w-full py-1 rounded cursor-pointer"
-                            onClick={() => {
-                              setSelectedBoardId(board.id);
-                              setIsModalOpen(true);
-                            }}
-                          >
-                            + Task Ekle
-                          </button>
-                        </div>
-                      ) : (
-                        <div className="flex flex-col justify-center">
-                          <img src="layer1.png" className="mb-4" />
-                          <button
-                            className="bg-blue-600 text-white w-full py-1 rounded cursor-pointer"
-                            onClick={() => {
-                              setSelectedBoardId(board.id);
-                              setIsModalOpen(true);
-                            }}
-                          >
-                            + Task Ekle
-                          </button>
-                        </div>
-                      )}
+                              );
+                            })}
+                            <button
+                              className="bg-blue-600 text-white w-full py-1 rounded cursor-pointer"
+                              onClick={() => {
+                                setSelectedBoardId(board.id);
+                                setIsModalOpen(true);
+                              }}
+                            >
+                              + Task Ekle
+                            </button>
+                          </div>
+                        ) : (
+                          <div className="flex flex-col justify-center">
+                            <img
+                              src="layer1.png"
+                              className="mb-4"
+                              draggable={false}
+                            />
+                            <button
+                              className="bg-blue-600 text-white w-full py-1 rounded cursor-pointer"
+                              onClick={() => {
+                                setSelectedBoardId(board.id);
+                                setIsModalOpen(true);
+                              }}
+                            >
+                              + Task Ekle
+                            </button>
+                          </div>
+                        )}
+                      </div>
                     </div>
-                  </div>
+                  </li>
+                ))}
+                <li className="w-[300px] h-[500px] flex justify-center items-center">
+                  <button
+                    onClick={handleAddBoard}
+                    className=" bg-blue-600 text-white rounded w-full h-full cursor-pointer"
+                  >
+                    + Board Ekle
+                  </button>
                 </li>
-              ))}
-              <li className="w-[300px] h-[500px] flex justify-center items-center">
-                <button
-                  onClick={handleAddBoard}
-                  className=" bg-blue-600 text-white rounded w-full h-full cursor-pointer"
-                >
-                  + Board Ekle
-                </button>
-              </li>
-            </ul>
+              </ul>
+            </div>
           </div>
         ) : (
           <p>Bir proje seçin</p>
@@ -451,6 +459,16 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      <style jsx global>{`
+        .active {
+          cursor: grabbing !important;
+          user-select: none;
+        }
+        ul::-webkit-scrollbar {
+          display: none;
+        }
+      `}</style>
     </div>
   );
 }

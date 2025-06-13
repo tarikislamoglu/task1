@@ -6,7 +6,7 @@ const SECRET = process.env.JWT_SECRET || "gizliAnahtar";
 
 export async function GET() {
   try {
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
     const token = cookieStore.get("token")?.value;
 
     if (!token) {

@@ -8,7 +8,7 @@ const SECRET = process.env.JWT_SECRET || "gizliAnahtar";
 export async function POST(request) {
   try {
     const { userId, password, email } = await request.json();
-    const cookieStore = cookies();
+    const cookieStore = await cookies();
 
     // Mevcut kullanıcıları kontrol et
     const existingUserData = cookieStore.get("userData")?.value;
