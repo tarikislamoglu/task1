@@ -1,48 +1,48 @@
-import { useRef, useEffect } from "react";
+import React, { useRef, useEffect } from "react";
 
 export default function useDragScroll() {
-  const ref = useRef(null);
+  const ref = useRef();
 
   useEffect(() => {
-    const slider = ref.current;
-    if (!slider) return;
+    const el = ref.current;
+    if (!el) return;
 
-    let isDragging = false;
-    let startX = 0;
-    let scrollLeft = 0;
+    let isDown = false;
+    let startX;
+    let scrollLeft;
 
     const onMouseDown = (e) => {
-      isDragging = true;
-      slider.classList.add("cursor-grabbing");
-      startX = e.clientX;
-      scrollLeft = slider.scrollLeft;
+      isDown = true;
+      el.classList.add("cursor-grabbing");
+      // Fare pozisyonunu container solundan göre al
+      startX = e.pageX - el.offsetLeft;
+      scrollLeft = el.scrollLeft;
     };
 
-    const onMouseUp = () => {
-      isDragging = false;
-      slider.classList.remove("cursor-grabbing");
+    const onMouseLeaveOrUp = () => {
+      isDown = false;
+      el.classList.remove("cursor-grabbing");
     };
 
     const onMouseMove = (e) => {
-      if (!isDragging) return;
-      e.preventDefault();
-      const x = e.clientX;
-      const walk = x - startX;
-      slider.scrollLeft = scrollLeft - walk;
+      if (!isDown) return;
+
+      const x = e.pageX - el.offsetLeft;
+      const walk = x - startX; // ne kadar kaydırdığını hesapla
+      el.scrollLeft = scrollLeft - walk;
     };
 
-    slider.style.cursor = "grab";
+    el.addEventListener("mousedown", onMouseDown);
+    el.addEventListener("mouseup", onMouseLeaveOrUp);
+    el.addEventListener("mouseleave", onMouseLeaveOrUp);
+    el.addEventListener("mousemove", onMouseMove);
 
-    slider.addEventListener("mousedown", onMouseDown);
-    slider.addEventListener("mouseup", onMouseUp);
-    slider.addEventListener("mouseleave", onMouseUp);
-    slider.addEventListener("mousemove", onMouseMove);
-
+    // Cleanup
     return () => {
-      slider.removeEventListener("mousedown", onMouseDown);
-      slider.removeEventListener("mouseup", onMouseUp);
-      slider.removeEventListener("mouseleave", onMouseUp);
-      slider.removeEventListener("mousemove", onMouseMove);
+      el.removeEventListener("mousedown", onMouseDown);
+      el.removeEventListener("mouseup", onMouseLeaveOrUp);
+      el.removeEventListener("mouseleave", onMouseLeaveOrUp);
+      el.removeEventListener("mousemove", onMouseMove);
     };
   }, []);
 

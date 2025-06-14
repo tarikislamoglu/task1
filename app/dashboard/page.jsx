@@ -52,6 +52,14 @@ export default function Dashboard() {
     startDate: "",
     endDate: "",
   });
+  const [taskError, setTaskError] = useState("");
+  const [isProjectModalOpen, setIsProjectModalOpen] = useState(false);
+  const [isBoardModalOpen, setIsBoardModalOpen] = useState(false);
+  const [newProjectName, setNewProjectName] = useState("");
+  const [newBoardName, setNewBoardName] = useState("");
+  const [projectError, setProjectError] = useState("");
+  const [boardError, setBoardError] = useState("");
+  const [viewMode, setViewMode] = useState("boards"); // "boards" or "lists"
 
   useEffect(() => {
     async function checkAuth() {
@@ -75,23 +83,37 @@ export default function Dashboard() {
   }, [router]);
 
   const handleCreateProject = () => {
+    setProjectError("");
+    if (!newProjectName.trim()) {
+      setProjectError("Lütfen proje adı girin");
+      return;
+    }
     const newProject = {
       id: crypto.randomUUID(),
-      name: `Proje ${cart.length + 1}`,
+      name: newProjectName.trim(),
       boards: [],
     };
     dispatch(addProject(newProject));
+    setNewProjectName("");
+    setIsProjectModalOpen(false);
   };
 
   const handleAddBoard = () => {
     if (!activeProject) return;
+    setBoardError("");
+    if (!newBoardName.trim()) {
+      setBoardError("Lütfen board adı girin");
+      return;
+    }
     dispatch(
       addBoardToActiveProject({
         id: crypto.randomUUID(),
-        title: `Board ${activeProject.boards.length + 1}`,
+        title: newBoardName.trim(),
         comments: [],
       })
     );
+    setNewBoardName("");
+    setIsBoardModalOpen(false);
   };
 
   async function handleLogout() {
@@ -104,6 +126,51 @@ export default function Dashboard() {
   const selectedBoard = activeProject?.boards.find(
     (b) => b.id === selectedBoardId
   );
+
+  const handleAddTask = () => {
+    setTaskError("");
+
+    // Validate all required fields
+    if (!commentValue.trim()) {
+      setTaskError("Lütfen bir yorum ekleyin");
+      return;
+    }
+    if (selectedAvatars.length === 0) {
+      setTaskError("Lütfen en az bir kişi seçin");
+      return;
+    }
+    if (!selectedFlag) {
+      setTaskError("Lütfen bir öncelik seviyesi seçin");
+      return;
+    }
+    if (!selectedDateRange.startDate || !selectedDateRange.endDate) {
+      setTaskError("Lütfen tarih aralığı seçin");
+      return;
+    }
+
+    // If all validations pass, add the task
+    dispatch(
+      updateBoardComment({
+        boardId: selectedBoard.id,
+        comment: {
+          text: commentValue,
+          avatars: selectedAvatars,
+          flag: selectedFlag,
+          dateRange: {
+            startDate: selectedDateRange.startDate.toString(),
+            endDate: selectedDateRange.endDate.toString(),
+          },
+        },
+      })
+    );
+
+    // Reset form
+    setCommentValue("");
+    setSelectedAvatars([]);
+    setSelectedFlag("");
+    setSelectedDateRange({ startDate: "", endDate: "" });
+    setIsModalOpen(false);
+  };
 
   return (
     <div className="flex md:flex-row flex-col">
@@ -147,8 +214,8 @@ export default function Dashboard() {
                 <p>Henüz proje yok.</p>
               )}
               <button
-                onClick={handleCreateProject}
-                className="mt-4 bg-green-600 hover:bg-green-500 w-full py-2 rounded text-white"
+                onClick={() => setIsProjectModalOpen(true)}
+                className="mt-4 bg-green-600 hover:bg-green-500 w-full py-2 rounded text-white cursor-pointer"
               >
                 + Proje Oluştur
               </button>
@@ -168,19 +235,47 @@ export default function Dashboard() {
 
       <main className="md:w-4/5 w-full p-6 bg-sky-100">
         <h1 className="text-2xl font-bold mb-4">Frontend Case</h1>
+        <div className="bg-white p-4 rounded shadow mb-6">
+          <div className="flex gap-4">
+            <button
+              onClick={() => setViewMode("boards")}
+              className={`px-4 py-2 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 cursor-pointer ${
+                viewMode === "boards"
+                  ? "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200 focus:ring-gray-500"
+              }`}
+            >
+              Boards
+            </button>
+            <button
+              onClick={() => setViewMode("lists")}
+              className={`px-4 py-2 rounded-md transition-colors focus:outline-none focus:ring-2 focus:ring-offset-2 cursor-pointer ${
+                viewMode === "lists"
+                  ? "bg-blue-600 text-white hover:bg-blue-700 focus:ring-blue-500"
+                  : "bg-gray-100 text-gray-700 hover:bg-gray-200 focus:ring-gray-500"
+              }`}
+            >
+              Lists
+            </button>
+            <button className="px-4 py-2 bg-gray-100 text-gray-700 rounded-md hover:bg-gray-200 transition-colors focus:outline-none focus:ring-2 focus:ring-gray-500 focus:ring-offset-2 cursor-pointer">
+              Others
+            </button>
+          </div>
+        </div>
 
         {activeProject ? (
           <div>
             <h2 className="text-lg font-semibold mb-2">
-              {activeProject.name} - Boards
+              {activeProject.name} -{" "}
+              {viewMode === "boards" ? "Boards" : "Lists"}
             </h2>
-            <div className="relative">
+            {viewMode === "boards" ? (
               <ul
                 ref={scrollRef}
-                className="flex gap-4 p-4 bg-white rounded shadow select-none overflow-x-auto cursor-grab"
+                className="flex gap-4 overflow-x-auto p-4 bg-white rounded shadow cursor-grab select-none"
               >
                 {activeProject.boards.map((board) => (
-                  <li key={board.id} className="flex-shrink-0">
+                  <li key={board.id}>
                     <div className="w-[300px] h-[500px] bg-gray-50 p-4 rounded shadow">
                       <div className="flex justify-between items-center mb-2">
                         <h3 className="font-semibold">{board.title}</h3>
@@ -223,6 +318,10 @@ export default function Dashboard() {
                                       c.dateRange.endDate
                                     ).toLocaleDateString()}
                                   </p>
+                                  <p className="text-xs text-gray-700 flex space-x-3">
+                                    <span> Milestone Name</span>
+                                    <img src={c.flag.src} />
+                                  </p>
                                 </div>
                               );
                             })}
@@ -258,16 +357,106 @@ export default function Dashboard() {
                     </div>
                   </li>
                 ))}
-                <li className="w-[300px] h-[500px] flex justify-center items-center">
-                  <button
-                    onClick={handleAddBoard}
-                    className=" bg-blue-600 text-white rounded w-full h-full cursor-pointer"
-                  >
-                    + Board Ekle
-                  </button>
+                <li>
+                  <div className="w-[300px] h-[500px] bg-gray-50 p-4 rounded shadow flex justify-center items-center">
+                    <button
+                      onClick={() => setIsBoardModalOpen(true)}
+                      className="w-full h-full flex flex-col justify-center items-center gap-2 text-blue-600 hover:bg-gray-100 rounded transition-colors cursor-pointer"
+                    >
+                      <IoIosAdd className="w-8 h-8" />
+                      <span className="text-lg font-semibold">Board Ekle</span>
+                    </button>
+                  </div>
                 </li>
               </ul>
-            </div>
+            ) : (
+              <div className="bg-white rounded shadow">
+                <div className="p-4 border-b">
+                  <div className="flex justify-between items-center">
+                    <h3 className="font-semibold">Board Listesi</h3>
+                    <button
+                      onClick={() => setIsBoardModalOpen(true)}
+                      className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors cursor-pointer flex items-center gap-2"
+                    >
+                      <IoIosAdd className="w-5 h-5" />
+                      Board Ekle
+                    </button>
+                  </div>
+                </div>
+                <div className="divide-y">
+                  {activeProject.boards.map((board) => (
+                    <div
+                      key={board.id}
+                      className="p-4 hover:bg-gray-50 transition-colors"
+                    >
+                      <div className="flex justify-between items-start">
+                        <div className="flex-1">
+                          <h4 className="font-medium text-lg mb-2">
+                            {board.title}
+                          </h4>
+                          <div className="space-y-2">
+                            {board.comments.map((comment, idx) => (
+                              <div key={idx} className="bg-gray-50 p-3 rounded">
+                                <div className="flex items-center gap-2 mb-2">
+                                  {comment.avatars.map(({ id, src, name }) => (
+                                    <img
+                                      key={id}
+                                      src={src}
+                                      className="w-5 h-5 rounded-full border"
+                                      title={name}
+                                      alt={name}
+                                    />
+                                  ))}
+                                </div>
+                                <p className="text-sm mb-1">{comment.text}</p>
+                                <div className="flex items-center gap-4 text-xs text-gray-500">
+                                  <span>
+                                    {new Date(
+                                      comment.dateRange.startDate
+                                    ).toLocaleDateString()}{" "}
+                                    -{" "}
+                                    {new Date(
+                                      comment.dateRange.endDate
+                                    ).toLocaleDateString()}
+                                  </span>
+                                  <div className="flex items-center gap-1">
+                                    <span>Milestone Name</span>
+                                    <img
+                                      src={comment.flag.src}
+                                      alt={comment.flag.name}
+                                      className="w-4 h-4"
+                                    />
+                                  </div>
+                                </div>
+                              </div>
+                            ))}
+                          </div>
+                        </div>
+                        <div className="flex items-center gap-2">
+                          <button
+                            onClick={() => {
+                              setSelectedBoardId(board.id);
+                              setIsModalOpen(true);
+                            }}
+                            className="px-3 py-1 bg-blue-600 text-white text-sm rounded hover:bg-blue-700 transition-colors cursor-pointer"
+                          >
+                            Task Ekle
+                          </button>
+                          <button
+                            onClick={() =>
+                              dispatch(removeBoardFromActiveProject(board.id))
+                            }
+                            className="p-1 text-gray-500 hover:text-red-600 transition-colors cursor-pointer"
+                          >
+                            <IoMdClose className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </div>
+            )}
           </div>
         ) : (
           <p>Bir proje seçin</p>
@@ -335,29 +524,14 @@ export default function Dashboard() {
                   value={commentValue}
                   onChange={(e) => setCommentValue(e.target.value)}
                 />
+                {taskError && (
+                  <p className="text-red-500 text-sm mt-2" role="alert">
+                    {taskError}
+                  </p>
+                )}
                 <button
-                  className="mt-2 bg-blue-600 text-white px-4 py-2 rounded absolute bottom-1 right-0"
-                  onClick={() => {
-                    dispatch(
-                      updateBoardComment({
-                        boardId: selectedBoard.id,
-                        comment: {
-                          text: commentValue,
-                          avatars: selectedAvatars,
-                          flag: selectedFlag,
-                          dateRange: {
-                            startDate: selectedDateRange.startDate.toString(),
-                            endDate: selectedDateRange.endDate.toString(),
-                          },
-                        },
-                      })
-                    );
-                    setCommentValue("");
-                    setSelectedAvatars([]);
-                    setSelectedFlag("");
-                    setSelectedDateRange({ startDate: "", endDate: "" });
-                    setIsModalOpen(false);
-                  }}
+                  className="mt-2 bg-blue-600 text-white px-4 py-2 rounded absolute bottom-1 right-0 hover:bg-blue-700 transition-colors cursor-pointer"
+                  onClick={handleAddTask}
                 >
                   Gönder
                 </button>
@@ -460,15 +634,79 @@ export default function Dashboard() {
         </div>
       )}
 
-      <style jsx global>{`
-        .active {
-          cursor: grabbing !important;
-          user-select: none;
-        }
-        ul::-webkit-scrollbar {
-          display: none;
-        }
-      `}</style>
+      {/* Project Creation Modal */}
+      {isProjectModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-lg shadow-xl w-96">
+            <h3 className="text-xl font-bold mb-4">Yeni Proje Oluştur</h3>
+            <input
+              type="text"
+              value={newProjectName}
+              onChange={(e) => setNewProjectName(e.target.value)}
+              placeholder="Proje adı girin"
+              className="w-full p-2 border rounded mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            {projectError && (
+              <p className="text-red-500 text-sm mb-4">{projectError}</p>
+            )}
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setIsProjectModalOpen(false);
+                  setNewProjectName("");
+                  setProjectError("");
+                }}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors cursor-pointer"
+              >
+                İptal
+              </button>
+              <button
+                onClick={handleCreateProject}
+                className="px-4 py-2 bg-green-600 text-white rounded hover:bg-green-700 transition-colors cursor-pointer"
+              >
+                Oluştur
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Board Creation Modal */}
+      {isBoardModalOpen && (
+        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center">
+          <div className="bg-white p-6 rounded-lg shadow-xl w-96">
+            <h3 className="text-xl font-bold mb-4">Yeni Board Oluştur</h3>
+            <input
+              type="text"
+              value={newBoardName}
+              onChange={(e) => setNewBoardName(e.target.value)}
+              placeholder="Board adı girin"
+              className="w-full p-2 border rounded mb-4 focus:outline-none focus:ring-2 focus:ring-blue-500"
+            />
+            {boardError && (
+              <p className="text-red-500 text-sm mb-4">{boardError}</p>
+            )}
+            <div className="flex justify-end gap-2">
+              <button
+                onClick={() => {
+                  setIsBoardModalOpen(false);
+                  setNewBoardName("");
+                  setBoardError("");
+                }}
+                className="px-4 py-2 bg-gray-200 text-gray-700 rounded hover:bg-gray-300 transition-colors cursor-pointer"
+              >
+                İptal
+              </button>
+              <button
+                onClick={handleAddBoard}
+                className="px-4 py-2 bg-blue-600 text-white rounded hover:bg-blue-700 transition-colors cursor-pointer"
+              >
+                Oluştur
+              </button>
+            </div>
+          </div>
+        </div>
+      )}
     </div>
   );
 }
